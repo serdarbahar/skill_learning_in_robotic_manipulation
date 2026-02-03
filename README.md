@@ -1,2 +1,2 @@
-# skill_learning_in_robotic_manipulation
+# Skill Learning In Robotic Manipulation
 Github repo for CMPE492
