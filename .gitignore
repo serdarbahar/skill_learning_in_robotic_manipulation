@@ -1,0 +1,17 @@
+# Environments
+.venv/
+env/
+__pycache__/
+
+# Data & Weights
+data/
+checkpoints/
+*.pt
+*.pth
+*.npy
+
+.env
+
+# Tooling
+.ruff_cache/
+.pytest_cache/
