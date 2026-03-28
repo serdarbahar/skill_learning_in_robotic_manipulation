@@ -16,3 +16,6 @@ dependencies = [
 dev = [
     "ruff>=0.15.8",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]
