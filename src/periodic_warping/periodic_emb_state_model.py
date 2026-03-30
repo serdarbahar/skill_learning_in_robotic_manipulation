@@ -2,12 +2,11 @@ import numpy as np
 from typing import Tuple
 
  
-class PeriodicWarpingModel:
+class PeriodicEmbStateModel:
     
     def __init__(
         self,
         period_c: np.ndarray = np.array([2 * np.pi], dtype=np.float32),
-        period_q: np.ndarray = np.array([2 * np.pi], dtype=np.float32),
         length_scale: float = 1.0,
     ):
     
@@ -15,11 +14,10 @@ class PeriodicWarpingModel:
         assert isinstance(period_c, np.ndarray) and period_c.ndim == 1, "period_c must be a 1D numpy array"
 
         self.period_c = np.array(period_c, dtype=np.float32)
-        self.period_q = np.array(period_q, dtype=np.float32)
         self.length_scale = length_scale
  
         self._c_train_embedded = None  # (M, 2)
-        self._q_train_embedded = None  # (M, N, 2)
+        self._q_train = None          # (M, N, 1)
         self._s_train = None           # (N,)
         self._num_traj = None
     
@@ -67,13 +65,7 @@ class PeriodicWarpingModel:
         # Embed conditioning variables: (M, d_c) -> (M, 2*d_c)
         self._c_train_embedded = self._embed_to_circle(c_train, self.period_c)
  
-        # Embed output trajectories: (M, N, d_q) -> (M, N, 2*d_q)
-        self._q_train_embedded = np.zeros((M, N, 2 * d_q))
-        for j in range(N):
-            self._q_train_embedded[:, j, :] = self._embed_to_circle(
-                q_train[:, j, :], self.period_q
-            )
- 
+        self._q_train = q_train.copy()
         self._s_train = s.copy()
         self._num_traj = N
  
@@ -85,7 +77,7 @@ class PeriodicWarpingModel:
  
         K = c_query.shape[0]
         N = self._num_traj
-        d_q = len(self.period_q)
+        d_q = self._q_train.shape[-1]
  
         c_query_emb = self._embed_to_circle(c_query, self.period_c) # Embed query conditioning: (K, d_c) -> (K, 2*d_c)
  
@@ -94,26 +86,15 @@ class PeriodicWarpingModel:
         weights = weights / (weights.sum(axis=1, keepdims=True) + 0) # Normalize weights
  
         q_pred = np.zeros((K, N, d_q))
-        confidence = np.zeros((K, N, d_q))
-        q_pred_emb = np.zeros((K, N, 2 * d_q))
  
         for j in range(N):
 
             # Weighted average in embedded output space: (K, 2*d_q)
-            q_emb_j = self._q_train_embedded[:, j, :]  # (M, 2*d_q)
+            q_emb_j = self._q_train[:, j, :]  # (M, 2*d_q)
             q_avg = weights @ q_emb_j                    # (K, 2*d_q)
+            q_pred[:, j, :] = q_avg
  
-            # Compute confidence as norm of each (cos, sin) pair before normalization
-            q_pairs = q_avg.reshape(K, d_q, 2)           # (K, d_q, 2)
-            norms = np.linalg.norm(q_pairs, axis=-1)      # (K, d_q)
-            confidence[:, j, :] = norms
- 
-            # Unembed (atan2 handles the normalization implicitly)
-            q_pred[:, j, :] = self._unembed_from_circle(q_avg, self.period_q)
-
-            q_pred_emb[:, j, :] = q_avg  # Store embedded prediction for visualization
- 
-        return q_pred, confidence, q_pred_emb
+        return q_pred
 
 
         
