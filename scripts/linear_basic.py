@@ -1,6 +1,6 @@
 from linear_extrapolation.linear_basic_extrapolator import LinearBasicExtrapolator
-from linear_extrapolation.visualizer import Visualizer
-from linear_extrapolation.generate_sinusoidal import generate_sinusoidal
+from utils.visualizer import Visualizer
+from utils.generate_sinusoidal import generate_sinusoidal
 import numpy as np
 
 if __name__ == "__main__":
