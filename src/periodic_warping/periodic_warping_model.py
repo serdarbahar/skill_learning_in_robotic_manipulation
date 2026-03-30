@@ -6,11 +6,14 @@ class PeriodicWarpingModel:
     
     def __init__(
         self,
-        period_c: float = 2 * np.pi,
-        period_q: float = 2 * np.pi,
+        period_c: np.ndarray = np.array([2 * np.pi], dtype=np.float32),
+        period_q: np.ndarray = np.array([2 * np.pi], dtype=np.float32),
         length_scale: float = 1.0,
     ):
-        
+    
+        # period_c and period_q cannot be scalar 
+        assert isinstance(period_c, np.ndarray) and period_c.ndim == 1, "period_c must be a 1D numpy array"
+
         self.period_c = np.array(period_c, dtype=np.float32)
         self.period_q = np.array(period_q, dtype=np.float32)
         self.length_scale = length_scale
@@ -20,17 +23,19 @@ class PeriodicWarpingModel:
         self._s_train = None           # (N,)
         self._num_traj = None
     
+    @staticmethod
     def _embed_to_circle(x: np.ndarray, period: np.ndarray) -> np.ndarray:
 
         assert x.ndim == 2, "Input x must be 2D (M, d)"
         assert x.shape[1] == len(period), "Input dimension must match period dimension"
  
-        theta = 2 * np.pi * x / period  # (*, d)
+        theta = 2 * np.pi * x / period  # (M, d)
         cos_vals = np.cos(theta)
         sin_vals = np.sin(theta)
-        z = np.stack([cos_vals, sin_vals], axis=-1).reshape(*x.shape[:-1], -1) # Stack and reshape: (*, d, 2) -> (*, 2d)
+        z = np.stack([cos_vals, sin_vals], axis=-1).reshape(*x.shape[:-1], -1) # Stack and reshape: (M, d, 2) -> (M, 2d)
         return z
-
+    
+    @staticmethod
     def _unembed_from_circle(z: np.ndarray, period: np.ndarray) -> np.ndarray:
 
         d = len(period)
@@ -54,7 +59,6 @@ class PeriodicWarpingModel:
 
     def fit(self, c_train: np.ndarray, q_train: np.ndarray, s: np.ndarray):
 
-        assert len(c_train) == len(q_train) == len(s), "Training data length mismatch"
         assert c_train.dtype == np.float32 and q_train.dtype == np.float32, "Training data must be float32"
         assert c_train.ndim == 2 and q_train.ndim == 3, "c_train must be (M, d_c) and q_train must be (M, N, d_q)"
  
@@ -87,13 +91,14 @@ class PeriodicWarpingModel:
  
         weights = self._rbf_kernel(c_query_emb, self._c_train_embedded) # Kernel weights: (K, M)
 
-        weights = weights / (weights.sum(axis=1, keepdims=True) + 1e-12) # Normalize weights
+        weights = weights / (weights.sum(axis=1, keepdims=True) + 0) # Normalize weights
  
         q_pred = np.zeros((K, N, d_q))
         confidence = np.zeros((K, N, d_q))
+        q_pred_emb = np.zeros((K, N, 2 * d_q))
  
         for j in range(N):
-            
+
             # Weighted average in embedded output space: (K, 2*d_q)
             q_emb_j = self._q_train_embedded[:, j, :]  # (M, 2*d_q)
             q_avg = weights @ q_emb_j                    # (K, 2*d_q)
@@ -105,8 +110,10 @@ class PeriodicWarpingModel:
  
             # Unembed (atan2 handles the normalization implicitly)
             q_pred[:, j, :] = self._unembed_from_circle(q_avg, self.period_q)
+
+            q_pred_emb[:, j, :] = q_avg  # Store embedded prediction for visualization
  
-        return q_pred, confidence
+        return q_pred, confidence, q_pred_emb
 
 
         

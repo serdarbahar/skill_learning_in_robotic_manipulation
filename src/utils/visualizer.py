@@ -40,3 +40,8 @@ class Visualizer:
         plt.legend()
         plt.savefig(os.path.join(self.results_dir, "extrapolation_plot.png"))
         plt.close()
+
+    def save_external_plot(self, fig: plt.Figure, filename: str):
+        if not os.path.exists(self.results_dir):
+            os.makedirs(self.results_dir)
+        fig.savefig(os.path.join(self.results_dir, filename))
