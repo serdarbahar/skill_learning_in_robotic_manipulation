@@ -1,0 +1,2 @@
+- Very simplistic, linear combination from a given trajectory set to predict queries out of the convex hull of the trajectory set.
+- Proof of concept

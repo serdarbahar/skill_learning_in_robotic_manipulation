@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+src/linear_extrapolation/__init__.py
+src/linear_extrapolation/generate_sinusoidal.py
+src/linear_extrapolation/linear_extrapolator.py
+src/linear_extrapolation/visualizer.py
+src/skill_learning_in_robotic_manipulation.egg-info/PKG-INFO
+src/skill_learning_in_robotic_manipulation.egg-info/SOURCES.txt
+src/skill_learning_in_robotic_manipulation.egg-info/dependency_links.txt
+src/skill_learning_in_robotic_manipulation.egg-info/requires.txt
+src/skill_learning_in_robotic_manipulation.egg-info/top_level.txt

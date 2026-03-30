@@ -1,0 +1,47 @@
+Metadata-Version: 2.4
+Name: skill-learning-in-robotic-manipulation
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.14
+Description-Content-Type: text/markdown
+Requires-Dist: matplotlib>=3.10.8
+Requires-Dist: numpy>=2.4.3
+Requires-Dist: python-dotenv>=1.2.2
+Requires-Dist: torch>=2.11.0
+Requires-Dist: tqdm>=4.67.3
+
+# Skill Learning In Robotic Manipulation
+
+Github repo for CMPE492
+
+## Installation and Setup
+
+#### Prerequisites
+Ensure you have uv installed. If not, run:
+
+```
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+#### Installation
+Clone the repository and sync the environment.
+
+```
+git clone https://github.com/serdarbahar/skill_learning_in_robotic_manipulation.git
+cd skill_learning_in_robotic_manipulation
+uv sync
+```
+
+#### Environment Setup
+Create a .env file in the root directory to manage your local paths:
+
+```
+echo 'DATA_PATH="/path/to/your/datasets"' > .env
+```
+
+#### Running the Code
+Use uv run to execute scripts within the project environment:
+
+```
+uv run main.py
+```
