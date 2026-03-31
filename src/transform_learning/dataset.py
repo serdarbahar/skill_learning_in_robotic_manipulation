@@ -10,7 +10,7 @@ class CustomPointDataset(Dataset):
         self.eps = eps
         self.n = n
         
-        self.data = torch.zeros((num_samples, 2))
+        self.data = torch.zeros((num_samples, 1))
         self.labels = torch.zeros(num_samples, dtype=torch.long)
         
         dist_dist = torch.distributions.Categorical(torch.tensor(sampling_dist))
