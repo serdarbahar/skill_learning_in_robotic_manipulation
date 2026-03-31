@@ -1,0 +1,66 @@
+Experiment with num_dim=12, num_samples=1000, num_test_points=2
+
+Unconstrained Optimization Scores:Mean: 1.2665, Std: 1.0831
+Time (Unconstrained): Mean: 0.0030, Std: 0.0110
+Kernel-Based Prediction Scores:Mean: 1.8206, Std: 1.9402
+Time (Kernel): Mean: 0.0000, Std: 0.0000
+Class 0 - Unconstrained Optimization Mean: 1.5753, Std: 0.9903
+Class 0 - Kernel-Based Prediction Mean: 1.3533, Std: 0.9359
+Class 1 - Unconstrained Optimization Mean: 0.0158, Std: 0.0239
+Class 1 - Kernel-Based Prediction Mean: 3.7134, Std: 3.3223
+==================================================
+Experiment with num_dim=12, num_samples=1000, num_test_points=4
+
+Unconstrained Optimization Scores:Mean: 0.7056, Std: 0.5892
+Time (Unconstrained): Mean: 0.0026, Std: 0.0003
+Kernel-Based Prediction Scores:Mean: 0.6673, Std: 0.5173
+Time (Kernel): Mean: 0.0000, Std: 0.0000
+Class 0 - Unconstrained Optimization Mean: 0.8788, Std: 0.5305
+Class 0 - Kernel-Based Prediction Mean: 0.7654, Std: 0.5046
+Class 1 - Unconstrained Optimization Mean: 0.0042, Std: 0.0058
+Class 1 - Kernel-Based Prediction Mean: 0.2701, Std: 0.3525
+==================================================
+Experiment with num_dim=12, num_samples=1000, num_test_points=8
+
+Unconstrained Optimization Scores:Mean: 0.6919, Std: 0.5689
+Time (Unconstrained): Mean: 0.0026, Std: 0.0001
+Kernel-Based Prediction Scores:Mean: 0.6712, Std: 0.5443
+Time (Kernel): Mean: 0.0000, Std: 0.0000
+Class 0 - Unconstrained Optimization Mean: 0.8620, Std: 0.5073
+Class 0 - Kernel-Based Prediction Mean: 0.8211, Std: 0.5042
+Class 1 - Unconstrained Optimization Mean: 0.0028, Std: 0.0048
+Class 1 - Kernel-Based Prediction Mean: 0.0638, Std: 0.0801
+==================================================
+Experiment with num_dim=12, num_samples=1000, num_test_points=12
+
+Unconstrained Optimization Scores:Mean: 0.8291, Std: 0.6418
+Time (Unconstrained): Mean: 0.0026, Std: 0.0001
+Kernel-Based Prediction Scores:Mean: 0.8526, Std: 0.5833
+Time (Kernel): Mean: 0.0000, Std: 0.0000
+Class 0 - Unconstrained Optimization Mean: 1.0324, Std: 0.5519
+Class 0 - Kernel-Based Prediction Mean: 1.0352, Std: 0.5022
+Class 1 - Unconstrained Optimization Mean: 0.0055, Std: 0.0141
+Class 1 - Kernel-Based Prediction Mean: 0.1128, Std: 0.1190
+==================================================
+Experiment with num_dim=12, num_samples=1000, num_test_points=16
+
+Unconstrained Optimization Scores:Mean: 0.6794, Std: 0.5178
+Time (Unconstrained): Mean: 0.0026, Std: 0.0001
+Kernel-Based Prediction Scores:Mean: 0.7467, Std: 0.5071
+Time (Kernel): Mean: 0.0000, Std: 0.0000
+Class 0 - Unconstrained Optimization Mean: 0.8459, Std: 0.4406
+Class 0 - Kernel-Based Prediction Mean: 0.9156, Std: 0.4191
+Class 1 - Unconstrained Optimization Mean: 0.0049, Std: 0.0121
+Class 1 - Kernel-Based Prediction Mean: 0.0628, Std: 0.0592
+==================================================
+Experiment with num_dim=12, num_samples=1000, num_test_points=20
+
+Unconstrained Optimization Scores:Mean: 0.9623, Std: 0.7298
+Time (Unconstrained): Mean: 0.0027, Std: 0.0001
+Kernel-Based Prediction Scores:Mean: 0.9523, Std: 0.6705
+Time (Kernel): Mean: 0.0000, Std: 0.0000
+Class 0 - Unconstrained Optimization Mean: 1.1981, Std: 0.6189
+Class 0 - Kernel-Based Prediction Mean: 1.1745, Std: 0.5571
+Class 1 - Unconstrained Optimization Mean: 0.0071, Std: 0.0182
+Class 1 - Kernel-Based Prediction Mean: 0.0525, Std: 0.0545
+==================================================

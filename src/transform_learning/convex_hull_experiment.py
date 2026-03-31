@@ -22,8 +22,8 @@ class DifferentiableConvexHull:
         self.txt_file_path = "src/transform_learning/convex_hull_results.txt"
     
     def load_dataset(self):
-        # Load or generate your dataset here. For example:
-        self.dataset = CustomPointDataset(num_samples=self.num_samples, eps=0.1, n=5, sampling_dist=[0.4, 0.4, 0.2], seed=42)
+        # Load or generate your dataset here. For example
+        self.dataset = CustomPointDataset(num_samples=self.num_samples, eps=0.1, n=5, sampling_dist=[0.8, 0.0, 0.2], seed=42)
 
         self.test_points = torch.rand((self.num_test_points-2, 1)) * 2 - 1  # random test points in the range [-1, 1]
         self.test_points = torch.cat((self.test_points, torch.tensor([[1.0], [-1.0]])))  # add boundary points
@@ -43,12 +43,10 @@ class DifferentiableConvexHull:
         self.projected_test_points = self.test_points @ projection_matrix
 
     def _unconstrained_optimization(self, query_embedding) -> float:
-        return 0.0
-        #return unconstrained_optimization(query_embedding, self.projected_test_points)
+        return unconstrained_optimization(query_embedding, self.projected_test_points)
 
     def _kernel_reconstruction(self, query_embedding) -> float:
-        return 0.0
-        #return kernel_reconstruction(query_embedding, self.projected_test_points)
+        return kernel_reconstruction(query_embedding, self.projected_test_points)
     
     def evaluate(self):
 
@@ -104,9 +102,9 @@ class DifferentiableConvexHull:
 
 if __name__ == "__main__":
 
-    num_dims = [2, 4]
-    num_samples = [1000, 5000]
-    num_test_points = [2, 5]
+    num_dims = [12]
+    num_samples = [1000]
+    num_test_points = [2, 4, 8, 12, 16, 20]
 
     for dim in num_dims:
         for samples in num_samples:
