@@ -1,0 +1,10 @@
+Unconstrained Optimization Scores:Mean: 0.0000, Std: 0.0000
+Kernel-Based Prediction Scores:Mean: 0.0000, Std: 0.0000
+Class 0 - Unconstrained Optimization Mean: 0.0000
+Class 0 - Unconstrained Optimization Std: 0.0000
+Class 0 - Kernel-Based Prediction Mean: 0.0000
+Class 0 - Kernel-Based Prediction Std: 0.0000
+Class 1 - Unconstrained Optimization Mean: 0.0000
+Class 1 - Unconstrained Optimization Std: 0.0000
+Class 1 - Kernel-Based Prediction Mean: 0.0000
+Class 1 - Kernel-Based Prediction Std: 0.0000
