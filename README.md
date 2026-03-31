@@ -31,5 +31,5 @@ echo 'DATA_PATH="/path/to/your/datasets"' > .env
 Use uv run to execute scripts within the project environment:
 
 ```
-uv run main.py
+uv run -m scripts.XXXX
 ```
