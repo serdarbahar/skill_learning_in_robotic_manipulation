@@ -1,4 +1,5 @@
 import torch
+from torch.nn import LayerNorm
 
 class MLP(torch.nn.Module):
 
@@ -14,6 +15,7 @@ class MLP(torch.nn.Module):
             layers.append(activation_fn())
             for _ in range(num_hidden_layers):
                 layers.append(torch.nn.Linear(hidden_dim, hidden_dim))
+                layers.append(LayerNorm(hidden_dim))
                 layers.append(activation_fn())
             layers.append(torch.nn.Linear(hidden_dim, output_dim))
     

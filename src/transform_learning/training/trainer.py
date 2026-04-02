@@ -1,35 +1,29 @@
+from typing import Optional
+
 import torch
 from torch.utils.data import DataLoader, random_split
 
 from transform_learning.data import CustomPointDataset
-from transform_learning.losses import vertex_reconstruction_loss
-from transform_learning.metrics import MetricsTracker
-from transform_learning.visualization import MetricsVisualizer
-from transform_learning.utils.geometry import check_in_hull
+from transform_learning.losses.base import TransformLoss
+from transform_learning.metrics import MetricsTracker, EmbeddingsTracker
+from transform_learning.metrics import MetricsVisualizer, EmbeddingsVisualizer
 from utils.mlp import MLP
+from transform_learning.metrics.custom_metrics import hull_success_rate
+
+
 
 class TransformTrainer:
-    def __init__(self, vertices, device=torch.device("cpu")):
+    def __init__(self, device=torch.device("cpu")):
 
-        assert type(vertices) is torch.Tensor, "Vertices must be a torch.Tensor"
-        assert vertices.ndim == 2, (
-            "Vertices must be a 2D tensor of shape (num_samples, num_features)"
-        )
         assert device in [torch.device("cpu"), torch.device("cuda")], (
             "Device must be either 'cpu' or 'cuda'"
         )
-
-        self.vertices = vertices
-        self.init_dim = self.vertices.shape[1]
         self.device = device
 
         self.metrics_tracker = MetricsTracker()
+        self.embeddings_tracker = EmbeddingsTracker()
         self.metrics_visualizer = MetricsVisualizer()
-        self.stats = self.metrics_tracker.stats
-        self.vertices_embeddings_current_epoch = []
-        self.trainset_embeddings_current_epoch = []
-        self.valset_embeddings_current_epoch = []
-        self.testset_embeddings = []
+        self.embeddings_visualizer = EmbeddingsVisualizer()
 
     def generate_dataset(
         self,
@@ -39,7 +33,7 @@ class TransformTrainer:
         sampling_dist: list,
         batch_size: int,
         train_val_test_split: list = [0.7, 0.15, 0.15],
-        seed: int | None = None,
+        seed: Optional[int] = None,
     ):
         self.train_val_test_split = train_val_test_split
         self.dataset = CustomPointDataset(num_samples, eps, n, sampling_dist, seed)
@@ -63,27 +57,35 @@ class TransformTrainer:
     def train(
         self,
         num_epochs,
+        vertices: torch.Tensor,
+        loss_fn: TransformLoss,
         learning_rate,
+        weight_decay,
         hidden_dim,
         num_hidden_dim_layers,
         out_dim,
         activation_fn,
         seed=None,
     ):
+        assert vertices.ndim == 2, "Vertices should be a 2D tensor of shape (num_vertices, vertex_dim)"
+
         if seed is not None:
             torch.manual_seed(seed)
+
+        self.vertices = vertices
+        self.init_dim = self.vertices.shape[1]
+        self.loss_fn = loss_fn
 
         self.model = MLP(self.init_dim, hidden_dim, out_dim, num_hidden_dim_layers, activation_fn).to(
             self.device
         )
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
         for _ in range(num_epochs):
-            self.trainset_embeddings_current_epoch = []
 
-            self.vertices_embeddings_current_epoch = self.model(
-                self.vertices.to(self.device)
-            )
+            
+            #self.embeddings_tracker.clear_vertices_embeddings()
+            self.embeddings_tracker.clear_train_embeddings()
 
             self.model.train()
             epoch_loss = 0.0
@@ -92,93 +94,99 @@ class TransformTrainer:
                 data, labels = data.to(self.device), labels.to(self.device)
 
                 self.optimizer.zero_grad()
-
                 outputs = self.model(data)
-                loss = vertex_reconstruction_loss(
-                    outputs, self.vertices_embeddings_current_epoch, labels
+
+                with torch.no_grad():
+                    vertices_embeddings = self.model(self.vertices.to(self.device))
+                    self.embeddings_tracker.log_vertices_embeddings(vertices_embeddings)
+        
+                loss = self.loss_fn(
+                    outputs=outputs, vertices_embeddings=self.embeddings_tracker.get_vertices_embeddings(), labels=labels,
+                    inputs=data, vertices=self.vertices.to(self.device)
                 )
+
                 epoch_loss += loss.item()
 
                 loss.backward()
                 self.optimizer.step()
 
-                self.trainset_embeddings_current_epoch.append(outputs)
+                self.embeddings_tracker.log_train_embeddings(outputs)
 
             self.model.eval()
-            epoch_loss /= len(self.train_loader)
-            self.metrics_tracker.log("train", loss=epoch_loss, error=self.training_error())
+    
+            labels = CustomPointDataset.get_labels_for_subset(self.train_dataset)
+            success = hull_success_rate(
+                self.embeddings_tracker.get_train_embeddings(),
+                self.embeddings_tracker.get_vertices_embeddings(),
+                labels
+            )
+            self.metrics_tracker.log("train", loss=epoch_loss / len(self.train_loader), success=success)
 
             self.validate()
 
     def validate(self):
-        self.valset_embeddings_current_epoch = []
+        self.embeddings_tracker.clear_val_embeddings()
         val_loss = 0.0
         with torch.no_grad():
             for batch in self.val_loader:
                 data, labels = batch
                 data, labels = data.to(self.device), labels.to(self.device)
                 outputs = self.model(data)
-                loss = vertex_reconstruction_loss(
-                    outputs, self.vertices_embeddings_current_epoch, labels
+                loss = self.loss_fn(
+                    outputs=outputs, vertices_embeddings=self.embeddings_tracker.get_vertices_embeddings(), labels=labels,
+                    inputs=data, vertices=self.vertices.to(self.device)
                 )
                 val_loss += loss.item()
-                self.valset_embeddings_current_epoch.append(outputs)
+                self.embeddings_tracker.log_val_embeddings(outputs)
 
-        val_loss /= len(self.val_loader)
-        self.metrics_tracker.log("val", loss=val_loss, error=self.validation_error())
+        labels = CustomPointDataset.get_labels_for_subset(self.val_dataset)
+        success = hull_success_rate(
+            self.embeddings_tracker.get_val_embeddings(),
+            self.embeddings_tracker.get_vertices_embeddings(),
+            labels
+        )
+        self.metrics_tracker.log("val", loss=val_loss / len(self.val_loader), success=success)
 
     def evaluate(self):
-        assert len(self.testset_embeddings) == 0, "Test embeddings are not empty"
+
+        self.embeddings_tracker.clear_test_embeddings()
 
         test_loss = 0.0
         with torch.no_grad():
             for batch in self.test_loader:
                 data, labels = batch
-
-                print(data)
                 data, labels = data.to(self.device), labels.to(self.device)
                 outputs = self.model(data)
-                self.testset_embeddings.append(outputs.cpu())
-                loss = vertex_reconstruction_loss(
-                    outputs, self.vertices_embeddings_current_epoch, labels
+                self.embeddings_tracker.log_test_embeddings(outputs)
+                loss = self.loss_fn(
+                    outputs=outputs, vertices_embeddings=self.embeddings_tracker.get_vertices_embeddings(), labels=labels,
+                    inputs=data, vertices=self.vertices.to(self.device)
                 )
                 test_loss += loss.item()
 
-        test_loss /= len(self.test_loader)
-        self.metrics_tracker.log("test", loss=test_loss, error=self.test_error())
+        labels = CustomPointDataset.get_labels_for_subset(self.test_dataset)
+        success = hull_success_rate(
+            self.embeddings_tracker.get_test_embeddings(),
+            self.embeddings_tracker.get_vertices_embeddings(),
+            labels
+        )
+
+        self.metrics_tracker.log("test", loss=(test_loss / len(self.test_loader)), success=success)
 
     def visualize(
-        self, metrics=None, show=False, save_path=None, title="Training Metrics"
-    ):
+        self, metrics=None, save_dir=None, title="Training Metrics"
+    ) -> None:
 
-        return self.metrics_visualizer(
-            self.stats,
+        self.metrics_visualizer(
+            stats=self.metrics_tracker.stats,
             metrics=metrics,
-            show=show,
-            save_path=save_path,
+            save_dir=save_dir,
             title=title,
         )
 
-    def training_error(self):
-        self.trainset_embeddings_current_epoch = torch.cat(self.trainset_embeddings_current_epoch, dim=0)
-        in_hull_check = check_in_hull(self.trainset_embeddings_current_epoch,
-                                            self.vertices_embeddings_current_epoch)
-        
-        return torch.sum(in_hull_check == self.train_loader.dataset.dataset.labels[self.train_loader.dataset.indices]) \
-            / len(self.train_loader.dataset)
-
-    def validation_error(self):
-        self.valset_embeddings_current_epoch = torch.cat(self.valset_embeddings_current_epoch, dim=0)
-        in_hull_check = check_in_hull(self.valset_embeddings_current_epoch, self.vertices_embeddings_current_epoch)
-        
-        return torch.sum(in_hull_check == self.val_loader.dataset.dataset.labels[self.val_loader.dataset.indices]) \
-            / len(self.val_loader.dataset)
-
-    def test_error(self):
-        self.testset_embeddings = torch.cat(self.testset_embeddings, dim=0)
-        in_hull_check = check_in_hull(self.testset_embeddings, self.vertices_embeddings_current_epoch)
-
-        print("Test set in-hull check:\n", in_hull_check)
-
-        return torch.sum(in_hull_check == self.test_loader.dataset.dataset.labels[self.test_loader.dataset.indices]) \
-            / len(self.test_loader.dataset)
+        self.embeddings_visualizer(
+            model=self.model,
+            dataset=self.dataset,
+            vertices=self.vertices,
+            save_dir=save_dir,
+        )

@@ -9,11 +9,9 @@ def check_in_hull(query: torch.Tensor, vertices: torch.Tensor) -> torch.Tensor:
     Uses Delaunay simplex lookup for dimensions >= 2, and interval checks for 1D.
     """
 
-    #print(query[-1])  # Print first 5 query points for debugging
-    #print(vertices)
-
     query_np = query.detach().cpu().numpy()
     vertices_np = vertices.detach().cpu().numpy()
+
 
     if query_np.ndim != 2 or vertices_np.ndim != 2:
         raise ValueError("query and vertices must both be 2D tensors")

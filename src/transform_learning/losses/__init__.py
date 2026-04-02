@@ -1,3 +1,5 @@
-from .vertex_reconstruction import vertex_reconstruction_loss
+from .composite_loss import CompositeLoss
+from .vertex_reconstruction import VertexReconstructionLoss
+from .volume_preservation import VolumePreservationLoss
 
-__all__ = ["vertex_reconstruction_loss"]
+__all__ = ["CompositeLoss", "VertexReconstructionLoss", "VolumePreservationLoss"]
