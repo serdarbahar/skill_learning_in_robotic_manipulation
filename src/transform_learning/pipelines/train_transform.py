@@ -17,7 +17,6 @@ def run_default_pipeline(device=None) -> TransformTrainer:
         eps=0.5,
         n=1,
         sampling_dist=[0.33, 0.33, 0.34],
-        seed=0,
         batch_size=64,
     )
     trainer.train(
@@ -26,7 +25,7 @@ def run_default_pipeline(device=None) -> TransformTrainer:
         hidden_dim=32,
         num_hidden_dim_layers=2,
         out_dim=2,
-        seed=0,
+        activation_fn = torch.nn.Tanh,
     )
     trainer.evaluate()
     trainer.visualize(metrics=["loss", "error"], show=True)

@@ -37,9 +37,9 @@ class TransformTrainer:
         eps: float,
         n: float,
         sampling_dist: list,
-        seed: int,
         batch_size: int,
         train_val_test_split: list = [0.7, 0.15, 0.15],
+        seed: int | None = None,
     ):
         self.train_val_test_split = train_val_test_split
         self.dataset = CustomPointDataset(num_samples, eps, n, sampling_dist, seed)
@@ -67,12 +67,13 @@ class TransformTrainer:
         hidden_dim,
         num_hidden_dim_layers,
         out_dim,
+        activation_fn,
         seed=None,
     ):
         if seed is not None:
             torch.manual_seed(seed)
 
-        self.model = MLP(self.init_dim, hidden_dim, out_dim, num_hidden_dim_layers, torch.nn.Tanh).to(
+        self.model = MLP(self.init_dim, hidden_dim, out_dim, num_hidden_dim_layers, activation_fn).to(
             self.device
         )
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
