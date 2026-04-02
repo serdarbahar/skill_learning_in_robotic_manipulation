@@ -8,6 +8,7 @@ dependencies = [
     "matplotlib>=3.10.8",
     "numpy>=2.4.3",
     "python-dotenv>=1.2.2",
+    "scipy>=1.16.2",
     "torch>=2.11.0",
     "tqdm>=4.67.3",
 ]
@@ -19,3 +20,6 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.scripts]
+train-transform = "transform_learning.pipelines.train_transform:run_default_pipeline"

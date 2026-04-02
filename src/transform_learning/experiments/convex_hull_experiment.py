@@ -1,6 +1,6 @@
 import torch
-from transform_learning.dataset import CustomPointDataset
-from transform_learning.differentiable_convex_hull import unconstrained_optimization, kernel_reconstruction 
+from transform_learning.data.dataset import CustomPointDataset
+from transform_learning.experiments.differentiable_convex_hull import unconstrained_optimization, kernel_reconstruction 
 import time
 
 class DifferentiableConvexHull:
@@ -35,7 +35,6 @@ class DifferentiableConvexHull:
         labels = torch.stack(labels)
         self.labels = labels
 
-        
         # Random projection matrix
         projection_matrix = torch.randn(data.shape[1], self.num_dim)
 
@@ -102,9 +101,9 @@ class DifferentiableConvexHull:
 
 if __name__ == "__main__":
 
-    num_dims = [12]
+    num_dims = [2]
     num_samples = [1000]
-    num_test_points = [2, 4, 8, 12, 16, 20]
+    num_test_points = [4, 8, 12, 16, 20]
 
     for dim in num_dims:
         for samples in num_samples:

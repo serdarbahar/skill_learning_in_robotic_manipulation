@@ -1,6 +1,8 @@
-import matplotlib.pyplot as plt
 import os
+
+import matplotlib.pyplot as plt
 from dotenv import load_dotenv
+
 
 class DummyVisualizer:
     def __init__(self):
