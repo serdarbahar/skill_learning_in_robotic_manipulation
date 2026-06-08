@@ -15,28 +15,6 @@ class VertexReconstructionLoss(TransformLoss):
                                           temperature=self.temperature,
                                           outside_margin=self.outside_margin)
 
-def vertex_mean_reconstruction_loss(
-    outputs: torch.Tensor,
-    vertices_embeddings: torch.Tensor,
-    labels: torch.Tensor,
-    temperature: float = 1.0,
-    outside_margin: float = 0.1,
-) -> torch.Tensor:
-    
-    """Differentiable convex-hull proxy loss.
-
-    For label 1 samples (inside/near hull), minimize reconstruction distance.
-    For label 0 samples (outside), enforce a margin on reconstruction distance.
-    """
-
-    vertices_embeddings = vertices_embeddings.detach()
-    labels = labels.float()
-    inside_loss = labels * (torch.sum((outputs - vertices_embeddings.mean(dim=0)) ** 2, dim=1))
-    outside_loss = (1.0 - labels) * F.relu(outside_margin - torch.sum((outputs - vertices_embeddings.mean(dim=0)) ** 2, dim=1))
-
-    return (inside_loss + outside_loss).mean()
-
-
 def vertex_reconstruction_loss(
     outputs: torch.Tensor,
     vertices_embeddings: torch.Tensor,

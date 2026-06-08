@@ -3,7 +3,7 @@ import argparse
 import matplotlib.pyplot as plt
 import torch
 
-from transform_learning.losses.vertex_reconstruction import vertex_reconstruction_loss, vertex_mean_reconstruction_loss
+from transform_learning.losses.vertex_reconstruction import vertex_reconstruction_loss
 
 
 class VertexLossVisualizer:

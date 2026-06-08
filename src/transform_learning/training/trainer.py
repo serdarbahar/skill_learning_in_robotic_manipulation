@@ -2,6 +2,7 @@ from typing import Optional
 
 import torch
 from torch.utils.data import DataLoader, random_split
+from tqdm import tqdm
 
 from transform_learning.data import CustomPointDataset
 from transform_learning.losses.base import TransformLoss
@@ -15,10 +16,10 @@ from transform_learning.metrics.custom_metrics import hull_success_rate
 class TransformTrainer:
     def __init__(self, device=torch.device("cpu")):
 
-        assert device in [torch.device("cpu"), torch.device("cuda")], (
+        self.device = torch.device(device) if not isinstance(device, torch.device) else device
+        assert self.device.type in ("cpu", "cuda"), (
             "Device must be either 'cpu' or 'cuda'"
         )
-        self.device = device
 
         self.metrics_tracker = MetricsTracker()
         self.embeddings_tracker = EmbeddingsTracker()
@@ -81,11 +82,8 @@ class TransformTrainer:
         )
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
-        for _ in range(num_epochs):
-
-            
-            #self.embeddings_tracker.clear_vertices_embeddings()
-            self.embeddings_tracker.clear_train_embeddings()
+        progress = tqdm(range(num_epochs), desc="Training", unit="epoch")
+        for _ in progress:
 
             self.model.train()
             epoch_loss = 0.0
@@ -110,19 +108,42 @@ class TransformTrainer:
                 loss.backward()
                 self.optimizer.step()
 
-                self.embeddings_tracker.log_train_embeddings(outputs)
-
             self.model.eval()
-    
-            labels = CustomPointDataset.get_labels_for_subset(self.train_dataset)
-            success = hull_success_rate(
-                self.embeddings_tracker.get_train_embeddings(),
-                self.embeddings_tracker.get_vertices_embeddings(),
-                labels
-            )
-            self.metrics_tracker.log("train", loss=epoch_loss / len(self.train_loader), success=success)
+
+            # Recompute train success on a clean forward pass. Collecting
+            # embeddings and labels together keeps them aligned regardless of
+            # DataLoader shuffling, and avoids the stale mid-epoch embeddings.
+            success = self._compute_success(self.train_loader)
+            mean_loss = epoch_loss / len(self.train_loader)
+            self.metrics_tracker.log("train", loss=mean_loss, success=success)
+            progress.set_postfix(loss=f"{mean_loss:.4f}", success=f"{success:.3f}")
 
             self.validate()
+
+    def _compute_success(self, loader):
+        """Hull success rate over a loader using a clean eval-mode pass.
+
+        Embeddings and labels are gathered per batch so their ordering stays
+        consistent even when the loader shuffles.
+        """
+        self.model.eval()
+        all_embeddings = []
+        all_labels = []
+        with torch.no_grad():
+            for batch in loader:
+                data, labels = batch
+                data = data.to(self.device)
+                outputs = self.model(data)
+                all_embeddings.append(outputs.detach().cpu())
+                all_labels.append(labels.detach().cpu())
+
+        embeddings = torch.cat(all_embeddings, dim=0)
+        labels = torch.cat(all_labels, dim=0)
+        return hull_success_rate(
+            embeddings,
+            self.embeddings_tracker.get_vertices_embeddings(),
+            labels,
+        )
 
     def validate(self):
         self.embeddings_tracker.clear_val_embeddings()
