@@ -8,8 +8,10 @@ def run_default_pipeline(device=None) -> TransformTrainer:
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    loss_fn = CompositeLoss([(1.0, VertexReconstructionLoss()),
-                             (0.0, VolumePreservationLoss())
+    loss_fn = CompositeLoss([(0.001, VertexReconstructionLoss(
+                                        temperature=2.0,
+                                        outside_margin=30.0,)),
+                             (0.2, VolumePreservationLoss())
                             ])
 
     vertices = torch.tensor([[1.0], 
@@ -21,19 +23,20 @@ def run_default_pipeline(device=None) -> TransformTrainer:
         num_samples=1000,
         eps=0.5,
         n=2,
-        sampling_dist=[0.33, 0.33, 0.34],
+        sampling_dist=[0.4, 0.4, 0.2],
         batch_size=64,
     )
+
     trainer.train(
         vertices=vertices,
         loss_fn=loss_fn,
         num_epochs=1000,
-        learning_rate=0.0003,
+        learning_rate=0.001,
         hidden_dim = 64,
-        num_hidden_dim_layers=3,
+        num_hidden_dim_layers = 3,
         out_dim=2,
-        activation_fn = torch.nn.SiLU,
-        weight_decay=0.0,
+        activation_fn = torch.nn.Tanh,
+        weight_decay= 0.0,
     )
     trainer.evaluate()
     trainer.visualize(metrics=["loss", "success"], save_dir="results")
@@ -41,6 +44,6 @@ def run_default_pipeline(device=None) -> TransformTrainer:
 
 
 if __name__ == "__main__":
-    selected_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    selected_device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print(f"Using device: {selected_device}")
     trainer = run_default_pipeline(device=selected_device)

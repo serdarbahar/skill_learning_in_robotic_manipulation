@@ -3,7 +3,7 @@ import argparse
 import matplotlib.pyplot as plt
 import torch
 
-from transform_learning.losses.vertex_reconstruction import vertex_reconstruction_loss
+from transform_learning.losses.vertex_reconstruction import vertex_reconstruction_loss, vertex_mean_reconstruction_loss
 
 
 class VertexLossVisualizer:
@@ -22,8 +22,8 @@ class VertexLossVisualizer:
 
                 ], dtype=torch.float32,))
         
-        self.temperature = 1.0
-        self.outside_margin = 0.1
+        self.temperature = 2.0
+        self.outside_margin = 50.0
 
     def _compute_loss_on_grid(self, label: int, x_min: float, x_max: float, y_min: float, y_max: float, resolution: int,
                               ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:

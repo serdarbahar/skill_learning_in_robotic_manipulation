@@ -28,8 +28,7 @@ def volume_preservation_loss(
     # pairwise distances in input space: each sample to each vertex
     input_dists = torch.cdist(inputs, vertices)          # (B, M)
     output_dists = torch.cdist(outputs, vertices_embeddings)  # (B, M)
-
     log_ratios = torch.log(output_dists + eps) - torch.log(input_dists + eps)
-    loss = log_ratios.var(dim=1).mean()
+    loss = log_ratios.var(dim=1).mean() + 10*log_ratios.mean()**2
 
     return loss
