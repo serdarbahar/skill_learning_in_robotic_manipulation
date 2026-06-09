@@ -1,3 +1,5 @@
+import copy
+from pathlib import Path
 from typing import Optional
 
 import torch
@@ -81,44 +83,82 @@ class TransformTrainer:
             self.device
         )
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=num_epochs, eta_min=learning_rate * 0.01)
+
+        # Best-model tracking (by validation success rate).
+        self.best_success = float("-inf")
+        self.best_state = None
+        self.best_epoch = 0
 
         progress = tqdm(range(num_epochs), desc="Training", unit="epoch")
-        for _ in progress:
+        epoch = 0
+        try:
+            for epoch in progress:
 
-            self.model.train()
-            epoch_loss = 0.0
-            for batch in self.train_loader:
-                data, labels = batch
-                data, labels = data.to(self.device), labels.to(self.device)
+                self.model.train()
+                epoch_loss = 0.0
+                for batch in self.train_loader:
+                    data, labels = batch
+                    data, labels = data.to(self.device), labels.to(self.device)
 
-                self.optimizer.zero_grad()
-                outputs = self.model(data)
+                    self.optimizer.zero_grad()
+                    outputs = self.model(data)
 
-                with torch.no_grad():
-                    vertices_embeddings = self.model(self.vertices.to(self.device))
-                    self.embeddings_tracker.log_vertices_embeddings(vertices_embeddings)
-        
-                loss = self.loss_fn(
-                    outputs=outputs, vertices_embeddings=self.embeddings_tracker.get_vertices_embeddings(), labels=labels,
-                    inputs=data, vertices=self.vertices.to(self.device)
+                    with torch.no_grad():
+                        vertices_embeddings = self.model(self.vertices.to(self.device))
+                        self.embeddings_tracker.log_vertices_embeddings(vertices_embeddings)
+
+                    loss = self.loss_fn(
+                        outputs=outputs, vertices_embeddings=self.embeddings_tracker.get_vertices_embeddings(), labels=labels,
+                        inputs=data, vertices=self.vertices.to(self.device)
+                    )
+
+                    epoch_loss += loss.item()
+
+                    loss.backward()
+                    self.optimizer.step()
+                    self.scheduler.step()
+                    self.optimizer.zero_grad()
+
+                self.model.eval()
+
+                # Recompute train success on a clean forward pass. Collecting
+                # embeddings and labels together keeps them aligned regardless of
+                # DataLoader shuffling, and avoids the stale mid-epoch embeddings.
+                success = self._compute_success(self.train_loader)
+                mean_loss = epoch_loss / len(self.train_loader)
+                self.metrics_tracker.log("train", loss=mean_loss, success=success)
+
+                self.validate()
+
+                # Snapshot the best model so far by validation success rate.
+                val_success = self.metrics_tracker.stats["val_success"][-1]
+                if val_success > self.best_success:
+                    self.best_success = val_success
+                    self.best_state = copy.deepcopy(self.model.state_dict())
+                    self.best_epoch = epoch + 1
+
+                progress.set_postfix(
+                    loss=f"{mean_loss:.4f}",
+                    success=f"{success:.3f}",
+                    best=f"{self.best_success:.3f}@{self.best_epoch}",
                 )
 
-                epoch_loss += loss.item()
-
-                loss.backward()
-                self.optimizer.step()
-
+        except KeyboardInterrupt:
+            progress.close()
+            print(
+                f"\nTraining interrupted at epoch {epoch + 1}. Restoring best model "
+                f"(val success {self.best_success:.3f} from epoch {self.best_epoch})."
+            )
+        finally:
+            # Restore best weights so downstream evaluate/visualize/save all use
+            # the best model, and refresh vertex embeddings to match it.
+            if self.best_state is not None:
+                self.model.load_state_dict(self.best_state)
             self.model.eval()
-
-            # Recompute train success on a clean forward pass. Collecting
-            # embeddings and labels together keeps them aligned regardless of
-            # DataLoader shuffling, and avoids the stale mid-epoch embeddings.
-            success = self._compute_success(self.train_loader)
-            mean_loss = epoch_loss / len(self.train_loader)
-            self.metrics_tracker.log("train", loss=mean_loss, success=success)
-            progress.set_postfix(loss=f"{mean_loss:.4f}", success=f"{success:.3f}")
-
-            self.validate()
+            with torch.no_grad():
+                vertices_embeddings = self.model(self.vertices.to(self.device))
+                self.embeddings_tracker.log_vertices_embeddings(vertices_embeddings)
 
     def _compute_success(self, loader):
         """Hull success rate over a loader using a clean eval-mode pass.
@@ -193,6 +233,23 @@ class TransformTrainer:
         )
 
         self.metrics_tracker.log("test", loss=(test_loss / len(self.test_loader)), success=success)
+
+    def save_model(self, save_dir, filename="best_model.pt"):
+        """Persist the best model (by val success) and its metadata to disk."""
+        path = Path(save_dir) / filename
+        path.parent.mkdir(parents=True, exist_ok=True)
+        state = self.best_state if getattr(self, "best_state", None) is not None else self.model.state_dict()
+        torch.save(
+            {
+                "model_state_dict": state,
+                "best_val_success": getattr(self, "best_success", None),
+                "best_epoch": getattr(self, "best_epoch", None),
+                "vertices": self.vertices,
+            },
+            path,
+        )
+        print(f"Saved best model to {path} (val success {getattr(self, 'best_success', float('nan')):.3f}).")
+        return path
 
     def visualize(
         self, metrics=None, save_dir=None, title="Training Metrics"
